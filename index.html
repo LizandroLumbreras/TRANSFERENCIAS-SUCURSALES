@@ -20,7 +20,7 @@
       position:relative;
     }
     body::before{
-      content:""; background:url('logo.png') center/320px no-repeat;
+      content:""; background:url('logo_proveedora.webp') center/320px no-repeat;
       opacity:.08; position:absolute; inset:0; z-index:0;
     }
     .menu{
@@ -47,18 +47,18 @@
 </head>
 <body>
   <div class="menu">
-    <img src="logo.png" alt="Logo">
+    <img src="logo_proveedora.webp" alt="Logo">
     <h1>Gestión de Transferencias</h1>
     <div class="botones">
-      <a href="solicitud-transferencia.html">📝 Solicitud de Transferencia</a>
+      <a href="tranfer.html">📝 Solicitud de Transferencia</a>
       <a href="visor-transferencias.html">📊 Monitoreo de Transferencias</a>
     </div>
-    <footer>Inventario PV • ${new Date().getFullYear()}</footer>
+    <footer id="footer"></footer>
   </div>
 
   <script>
-    // Inserta el año actual automáticamente en el footer
-    document.querySelector('footer').innerHTML =
+    // Inserta el año actual automáticamente
+    document.getElementById('footer').innerHTML =
       'Inventario PV • ' + new Date().getFullYear();
   </script>
 </body>
