@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Menú de Transferencias</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --azul:#00416A; --resalte:#0c6cbd;
+      --bg-grad:linear-gradient(to right,#00416A,#E4E5E6);
+      --card:rgba(255,255,255,.9); --shadow:0 6px 18px rgba(0,0,0,.18);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:'Poppins',sans-serif;
+      min-height:100vh; background:var(--bg-grad);
+      display:flex; align-items:center; justify-content:center;
+      position:relative;
+    }
+    body::before{
+      content:""; background:url('logo.png') center/320px no-repeat;
+      opacity:.08; position:absolute; inset:0; z-index:0;
+    }
+    .menu{
+      width:95%; max-width:650px; background:var(--card);
+      border-radius:var(--radius); box-shadow:var(--shadow);
+      padding:40px; text-align:center; position:relative; z-index:1;
+    }
+    .menu img{height:90px; margin-bottom:10px;}
+    h1{color:var(--azul); margin-bottom:30px;}
+    .botones{
+      display:flex; flex-direction:column; gap:15px; align-items:center;
+    }
+    a{
+      display:block; width:100%; max-width:340px; padding:14px;
+      background:var(--resalte); color:#fff; font-weight:600;
+      text-decoration:none; border-radius:10px;
+      transition:.2s; font-size:1rem;
+    }
+    a:hover{opacity:.9; transform:scale(1.02);}
+    footer{
+      margin-top:35px; color:rgba(0,0,0,.5); font-size:.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="menu">
+    <img src="logo.png" alt="Logo">
+    <h1>Gestión de Transferencias</h1>
+    <div class="botones">
+      <a href="solicitud-transferencia.html">📝 Solicitud de Transferencia</a>
+      <a href="visor-transferencias.html">📊 Monitoreo de Transferencias</a>
+    </div>
+    <footer>Inventario PV • ${new Date().getFullYear()}</footer>
+  </div>
+
+  <script>
+    // Inserta el año actual automáticamente en el footer
+    document.querySelector('footer').innerHTML =
+      'Inventario PV • ' + new Date().getFullYear();
+  </script>
+</body>
+</html>
