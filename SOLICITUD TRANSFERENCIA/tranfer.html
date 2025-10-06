@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Solicitud de Transferencia</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    :root{
+      --azul:#00416A; --resalte:#0c6cbd;
+      --bg-grad:linear-gradient(to right,#00416A,#E4E5E6);
+      --card:rgba(255,255,255,.9); --muted:rgba(0,0,0,.55);
+      --shadow:0 6px 18px rgba(0,0,0,.18); --radius:14px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:'Poppins',sans-serif;
+      min-height:100vh; background:var(--bg-grad);
+      display:flex; align-items:center; justify-content:center;
+      position:relative;
+    }
+    body::before{
+      content:""; background:url('logo.png') center/320px no-repeat;
+      opacity:.07; position:absolute; inset:0; z-index:0;
+    }
+    .card{
+      width:95%; max-width:850px; background:var(--card);
+      border-radius:var(--radius); box-shadow:var(--shadow);
+      padding:30px; position:relative; z-index:1;
+    }
+    header{text-align:center; margin-bottom:25px;}
+    header img{height:80px; margin-bottom:8px;}
+    header h1{margin:0; color:var(--azul); font-size:1.6rem;}
+    .info{
+      display:flex; justify-content:space-between; align-items:center;
+      margin-bottom:15px; flex-wrap:wrap;
+    }
+    .info div{font-weight:600; color:var(--muted);}
+    label{font-weight:600; color:var(--azul);}
+    input,select,button{
+      width:100%; padding:10px; margin-top:4px;
+      border:1px solid #ccc; border-radius:10px;
+      font-family:'Poppins',sans-serif;
+    }
+    button{
+      background:var(--resalte); color:#fff; font-weight:600;
+      cursor:pointer; transition:.2s;
+    }
+    button:hover{opacity:.9;}
+    table{
+      width:100%; border-collapse:collapse; margin-top:20px;
+    }
+    th,td{border:1px solid #ddd; padding:8px; text-align:left;}
+    th{background:#f3f6fa;}
+    .acciones{margin-top:20px; text-align:right;}
+    #resultados div:hover{background:#f3f6fa;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <header>
+      <img src="logo.png" alt="Logo"/>
+      <h1>Solicitud de Transferencia</h1>
+    </header>
+
+    <div class="info">
+      <div>Folio: <span id="folio"></span></div>
+      <div>Fecha: <span id="fecha"></span></div>
+    </div>
+
+    <div class="field">
+      <label>Sucursal</label>
+      <select id="sucursal">
+        <option value="">Selecciona una sucursal</option>
+        <option>ALLENDE 1</option>
+        <option>ALLENDE 2</option>
+        <option>MONTEMORELOS</option>
+        <option>PROVILEON</option>
+        <option>PETACA</option>
+        <option>RIO VERDE</option>
+        <option>CENTRAL</option>
+        <option>OSITO</option>
+      </select>
+    </div>
+
+    <div class="field" style="position:relative;">
+      <label>Buscar producto</label>
+      <input id="buscador" type="text" placeholder="Código o descripción...">
+      <div id="resultados" style="
+        position:absolute; top:70px; left:0; right:0; max-height:180px;
+        overflow-y:auto; background:white; border:1px solid #ccc;
+        border-radius:8px; z-index:5; display:none;"></div>
+    </div>
+
+    <div class="field">
+      <label>Cantidad</label>
+      <input id="cantidad" type="number" min="0" step="0.001" value="1"/>
+    </div>
+
+    <button id="agregar">Agregar producto</button>
+
+    <table id="tabla">
+      <thead>
+        <tr><th>Código</th><th>Descripción</th><th>Cantidad</th><th>Costo</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="acciones">
+      <button id="guardar">Guardar Solicitud</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    // Configuración Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCK5nb6u2CGRJ8AB1aPlRn54b97bdeAFeM",
+      authDomain: "inventariopv-643f1.firebaseapp.com",
+      projectId: "inventariopv-643f1",
+      storageBucket: "inventariopv-643f1.firebasestorage.app",
+      messagingSenderId: "96242533231",
+      appId: "1:96242533231:web:aae75a18fbaf9840529e9a"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Referencias
+    const fechaEl = document.getElementById('fecha');
+    const folioEl = document.getElementById('folio');
+    const sucursalEl = document.getElementById('sucursal');
+    const buscador = document.getElementById('buscador');
+// Permitir agregar con Enter en el campo cantidad
+document.getElementById('cantidad').addEventListener('keypress', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('agregar').click();
+  }
+});
+    const resultados = document.getElementById('resultados');
+    const tablaBody = document.querySelector('#tabla tbody');
+    const lista = [];
+    let productos = [];
+    let productoSeleccionado = null;
+
+    // Fecha actual
+    const f = new Date();
+    fechaEl.textContent = f.toLocaleDateString('es-MX');
+
+    // Cargar productos (ajustado a tus campos)
+    async function cargarProductos(){
+      const snap = await getDocs(collection(db,"productos"));
+      productos = snap.docs.map(doc => ({
+        id:doc.id,
+        codigo: String(doc.data().codigoBarra || doc.id),
+        descripcion: doc.data().concepto || "",
+        costo: doc.data().costoSinImpuesto || 0
+      }));
+    }
+
+    // Generar folio
+    async function generarFolio(){
+      const q = query(collection(db,"transferencias"),orderBy("fecha","desc"),limit(1));
+      const snap = await getDocs(q);
+      let nuevo=1;
+      if(!snap.empty){
+        const ultimo = snap.docs[0].data().folio || "T0000";
+        nuevo = parseInt(ultimo.replace("T",""))+1;
+      }
+      const folio = "T"+nuevo.toString().padStart(4,"0");
+      folioEl.textContent = folio;
+      return folio;
+    }
+
+    // Buscador
+    buscador.addEventListener('input',()=>{
+      const texto = buscador.value.toLowerCase();
+      if(!texto){resultados.style.display='none'; return;}
+const filtrados = productos.filter(p => {
+  const codigoTxt = String(p.codigo || "").toLowerCase();
+  const descTxt = String(p.descripcion || "").toLowerCase();
+  return codigoTxt.includes(texto) || descTxt.includes(texto);
+});
+
+      resultados.innerHTML = filtrados.map(p=>`
+        <div class="item" data-id="${p.id}" style="padding:6px 10px; cursor:pointer;">
+          <strong>${p.codigo}</strong> - ${p.descripcion}
+        </div>`).join('');
+      resultados.style.display = filtrados.length?'block':'none';
+    });
+
+    // Selección de producto
+    resultados.addEventListener('click',e=>{
+      const id = e.target.closest('.item')?.dataset.id;
+      if(!id) return;
+      productoSeleccionado = productos.find(p=>p.id===id);
+      buscador.value = `${productoSeleccionado.codigo} - ${productoSeleccionado.descripcion}`;
+      resultados.style.display='none';
+    });
+
+    // Agregar producto
+// Agregar producto
+document.getElementById('agregar').onclick = () => {
+  if (!productoSeleccionado)
+    return Swal.fire('Selecciona un producto válido');
+  const cantidad = parseFloat(document.getElementById('cantidad').value);
+  if (cantidad <= 0) return;
+  const fila = {
+    codigo: productoSeleccionado.codigo,
+    descripcion: productoSeleccionado.descripcion,
+    cantidad,
+    costo: productoSeleccionado.costo
+  };
+  lista.push(fila);
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${fila.codigo}</td><td>${fila.descripcion}</td><td>${fila.cantidad}</td><td>${fila.costo.toFixed(2)}</td>`;
+  tablaBody.appendChild(tr);
+  productoSeleccionado = null;
+  buscador.value = "";
+  buscador.focus(); // 🔹 Enfoca el buscador después de agregar
+};
+    // Guardar solicitud
+    document.getElementById('guardar').onclick = async ()=>{
+      const sucursal = sucursalEl.value.trim();
+      if(!sucursal || lista.length===0){
+        Swal.fire({icon:'warning',title:'Campos incompletos',text:'Selecciona sucursal y al menos un producto'});
+        return;
+      }
+      const folio = folioEl.textContent;
+      await addDoc(collection(db,"transferencias"),{
+        fecha:f.toISOString(),
+        sucursal,
+        folio,
+        items:lista
+      });
+      Swal.fire({icon:'success',title:'Solicitud guardada',showConfirmButton:false,timer:1500});
+      setTimeout(()=>location.reload(),1600);
+    };
+
+    cargarProductos();
+    generarFolio();
+  </script>
+</body>
+</html>
